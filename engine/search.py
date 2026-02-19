@@ -6,18 +6,50 @@ from engine.evaluation import evaluate_side_to_move
 
 INF = 10_000_000
 
+# Transposition Table:
+# key -> (depth, flag, value, best_move_uci)
+# flag: "EXACT", "LOWER", "UPPER"
+TT = {}
+
+
+def tt_key(board: chess.Board) -> int:
+    # python-chess versions differ; support both
+    if hasattr(board, "transposition_key"):
+        return board.transposition_key()
+    return board.zobrist_hash()
+
 
 def ordered_moves(board: chess.Board):
     moves = list(board.legal_moves)
 
-    def key(m: chess.Move):
+    # If we have a stored best move for this position, try it first
+    key = tt_key(board)
+    entry = TT.get(key)
+    if entry is not None:
+        _, _, _, best_move_uci = entry
+        if best_move_uci:
+            try:
+                bm = chess.Move.from_uci(best_move_uci)
+                if bm in moves:
+                    moves.remove(bm)
+                    moves.insert(0, bm)
+            except Exception:
+                pass
+
+    def sort_key(m: chess.Move):
         capture = 1 if board.is_capture(m) else 0
         board.push(m)
         gives_check = 1 if board.is_check() else 0
         board.pop()
         return (capture, gives_check)
 
-    moves.sort(key=key, reverse=True)
+    # Keep the TT move in front, sort the rest
+    if len(moves) > 1:
+        first = moves[0]
+        rest = moves[1:]
+        rest.sort(key=sort_key, reverse=True)
+        moves = [first] + rest
+
     return moves
 
 
@@ -52,7 +84,26 @@ def negamax(board: chess.Board, depth: int, alpha: int, beta: int):
     if depth == 0:
         return quiescence(board, alpha, beta)
 
+    key = tt_key(board)
+    alpha_orig = alpha
+    beta_orig = beta
+
+    # TT lookup
+    entry = TT.get(key)
+    if entry is not None:
+        tt_depth, flag, val, _ = entry
+        if tt_depth >= depth:
+            if flag == "EXACT":
+                return val
+            elif flag == "LOWER":
+                alpha = max(alpha, val)
+            elif flag == "UPPER":
+                beta = min(beta, val)
+            if alpha >= beta:
+                return val
+
     best = -math.inf
+    best_move_uci = None
 
     for move in ordered_moves(board):
         board.push(move)
@@ -61,12 +112,26 @@ def negamax(board: chess.Board, depth: int, alpha: int, beta: int):
 
         if score > best:
             best = score
+            best_move_uci = move.uci()
+
         if best > alpha:
             alpha = best
         if alpha >= beta:
             break
 
-    return int(best)
+    best = int(best)
+
+    # TT store
+    if best <= alpha_orig:
+        flag = "UPPER"
+    elif best >= beta_orig:
+        flag = "LOWER"
+    else:
+        flag = "EXACT"
+
+    TT[key] = (depth, flag, best, best_move_uci)
+
+    return best
 
 
 def choose_move(board: chess.Board, depth: int = 3):
@@ -82,6 +147,7 @@ def choose_move(board: chess.Board, depth: int = 3):
         if score > best_score:
             best_score = score
             best_move = move
+
         if best_score > alpha:
             alpha = best_score
 
