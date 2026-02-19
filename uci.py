@@ -13,12 +13,10 @@ def parse_position(cmd: str) -> chess.Board:
     parts = cmd.split()
     board = chess.Board()
 
-    # position startpos moves
     if "startpos" in parts:
         board = chess.Board()
         moves_index = parts.index("startpos") + 1
 
-    # position fen <fen> moves 
     elif "fen" in parts:
         fen_index = parts.index("fen") + 1
         fen = " ".join(parts[fen_index:fen_index + 6])
@@ -27,7 +25,6 @@ def parse_position(cmd: str) -> chess.Board:
 
     else:
         return board
-    # If there are moves specified after the position, play them on the board.
     if moves_index < len(parts) and parts[moves_index] == "moves":
         for mv in parts[moves_index + 1:]:
             board.push_uci(mv)
@@ -61,8 +58,8 @@ def pick_time_limit(board: chess.Board, parts: list[str]) -> float | None:
 
     # time buget: 1/30 of remaining time + 50% of increment
     think_ms = (time_ms / 30.0) + (0.5 * inc_ms)
-    think_ms = min(think_ms, time_ms * 0.25)  # never spend >25% of time remaining
-    think_ms = max(think_ms, 20)              # at least 20ms to think
+    think_ms = min(think_ms, time_ms * 0.25)
+    think_ms = max(think_ms, 20)
 
     return think_ms / 1000.0
 
@@ -71,7 +68,6 @@ def pick_time_limit(board: chess.Board, parts: list[str]) -> float | None:
 def uci_loop():
     board = chess.Board()
     default_depth = 3
-    # We read lines from stdin until we get a "quit" command. 
     while True:
         line = sys.stdin.readline()
         if not line:
