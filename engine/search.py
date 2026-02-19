@@ -12,11 +12,10 @@ INF = 10_000_000
 TT = {}
 
 
-def tt_key(board: chess.Board) -> int:
-    # python-chess versions differ; support both
-    if hasattr(board, "transposition_key"):
-        return board.transposition_key()
-    return board.zobrist_hash()
+def tt_key(board: chess.Board):
+    return board.fen()
+
+
 
 
 def ordered_moves(board: chess.Board):
