@@ -22,22 +22,16 @@ PIECE_VALUES = {
 def tt_key(board: chess.Board):
     return tuple(board.fen().split(" ", 4)[:4])
 
-
-
-
-
 # Move ordering: try TT move first, then captures and checks, ordered by MVV/LVA.
 def ordered_moves(board: chess.Board):
     moves = list(board.legal_moves)
-
-    # Move ordering is a huge deal for alpha-beta pruning efficiency. We want to try the most promising moves first to maximize cutoffs.
     key = tt_key(board)
     entry = TT.get(key)
-    # If we have a TT entry with a best move, try it first. This is often the best move from the previous search at this position, so it's a great heuristic.
+
+    # Try TT best move first
     if entry is not None:
         _, _, _, best_move_uci = entry
         if best_move_uci:
-            # Move the TT best move to the front of the list if it's legal. This can lead to much faster alpha-beta cutoffs.
             try:
                 bm = chess.Move.from_uci(best_move_uci)
                 if bm in moves:
@@ -45,6 +39,7 @@ def ordered_moves(board: chess.Board):
                     moves.insert(0, bm)
             except Exception:
                 pass
+
     # After the TT move, we sort captures and checks to try the most promising ones first. This is a common heuristic to improve pruning.            
     def sort_key(m: chess.Move):
         capture = 1 if board.is_capture(m) else 0
@@ -62,12 +57,11 @@ def ordered_moves(board: chess.Board):
 
     return moves
 
-# MVV/LVA sorting for captures: Most Valuable Victim / Least Valuable Attacker. 
+# MVV/LVA capture ordering
 # This is a common heuristic to order captures, trying the most "valuable" ones first 
 # (e.g. capturing a queen with a pawn is usually better than capturing a pawn with a queen).
 def _capture_moves(board: chess.Board):
     moves = [m for m in board.legal_moves if board.is_capture(m)]
-    # We sort captures by MVV/LVA: capture the most valuable victim with the least valuable attacker first. This often leads to better pruning in quiescence search.
     def mvv_lva_key(m: chess.Move):
         victim = board.piece_at(m.to_square)
         attacker = board.piece_at(m.from_square)
@@ -81,21 +75,17 @@ def _capture_moves(board: chess.Board):
 # Quiescence search: extends the search at leaf nodes to include captures,
 # to avoid the "horizon effect" where the engine misses a tactical sequence just beyond the search depth.
 def quiescence(board: chess.Board, alpha: int, beta: int, qdepth: int = 0) -> int:
-
     stand_pat = evaluate_side_to_move(board)
+
     # Hard limit on quiescence depth to prevent infinite recursion in crazy positions. 
     if qdepth >= 8:
         return stand_pat
-
-    # If the static evaluation is already good enough to cause a beta cutoff, we can stop searching this branch. This is a key part of alpha-beta pruning.
     if stand_pat >= beta:
         return beta
-
-    # If the static evaluation is better than alpha, we update alpha.
     if stand_pat > alpha:
         alpha = stand_pat
 
-    # Now we try all captures from this position. This is the "quiescence" part.
+    #This is the "quiescence" part.
     for move in _capture_moves(board):
         board.push(move)
         score = -quiescence(board, -beta, -alpha, qdepth + 1)
@@ -111,13 +101,10 @@ def quiescence(board: chess.Board, alpha: int, beta: int, qdepth: int = 0) -> in
 
 # Negamax search with alpha-beta pruning and a transposition table. Returns the score from the perspective of the side to move.
 def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None):
-    # Check for timeout at the start of each node. This allows us to gracefully exit the search when we run out of time, returning the best move found so far.
     if deadline is not None and time.time() >= deadline:
         raise TimeoutError
-    # If the game is already over, return the evaluation. This is a terminal node in the search tree.
     if board.is_game_over(claim_draw=True):
         return evaluate_side_to_move(board)
-    # If we've reached the maximum search depth, we switch to quiescence search to evaluate the position more accurately.
     if depth == 0:
         return quiescence(board, alpha, beta)
 
@@ -141,7 +128,8 @@ def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None
 
     best = -math.inf
     best_move_uci = None
-    # Move ordering is crucial for alpha-beta efficiency. We want to try the most promising moves first to maximize cutoffs. 
+
+    # Move ordering is crucial for alpha-beta efficiency. 
     for move in ordered_moves(board):
         board.push(move)
         score = -negamax(board, depth - 1, -beta, -alpha, deadline)
@@ -158,7 +146,7 @@ def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None
 
     best = int(best)
 
-    # Store the result in the transposition table. This allows us to reuse this information if we encounter the same position again at an equal or shallower depth.
+    # Store the result in the transposition table. 
     if best <= alpha_orig:
         flag = "UPPER"
     elif best >= beta_orig:
@@ -175,7 +163,6 @@ def choose_move(board: chess.Board, depth: int = 3, deadline=None):
     best_move = None
     best_score = -math.inf
     alpha, beta = -INF, INF
-    # Move ordering is crucial for alpha-beta efficiency. We want to try the most promising moves first to maximize cutoffs.
     for move in ordered_moves(board):
         board.push(move)
         score = -negamax(board, depth - 1, -beta, -alpha, deadline)
@@ -192,6 +179,7 @@ def choose_move(board: chess.Board, depth: int = 3, deadline=None):
         best_move = next(iter(board.legal_moves))
 
     return best_move
+
 # Iterative deepening with a time limit. We keep deepening the search until we run out of time.
 def choose_move_timed(board: chess.Board, time_limit_s: float):
     deadline = time.time() + time_limit_s * 0.97
