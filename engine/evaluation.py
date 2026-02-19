@@ -10,8 +10,9 @@ PIECE_VALUES = {
 }
 
 # Piece-square tables (from White's perspective).
-# Indexing: python-chess squares go from a1=0 ... h8=63.
-# These are simple, classic PSTs. Values are in centipawns (like piece values).
+# Indexing: python-chess squares go from a1=0, h8=63.
+# Values are in centipawns (like piece values).
+# PSTs are a common way to give positional bonuses/penalties based on piece location.
 PST_PAWN = [
      0,  0,  0,  0,  0,  0,  0,  0,
     50, 50, 50, 50, 50, 50, 50, 50,
@@ -67,7 +68,6 @@ PST_QUEEN = [
    -20,-10,-10, -5, -5,-10,-10,-20,
 ]
 
-# King PST (middlegame-ish; encourages castling / safety)
 PST_KING = [
    -30,-40,-40,-50,-50,-40,-40,-30,
    -30,-40,-40,-50,-50,-40,-40,-30,
@@ -90,32 +90,32 @@ PST = {
 
 
 def evaluate_white(board: chess.Board) -> int:
-    # Terminal positions
+    # Terminal positions (positive for White, negative for Black)
     if board.is_checkmate():
         return -10_000 if board.turn == chess.WHITE else 10_000
     if board.is_stalemate() or board.is_insufficient_material() or board.can_claim_draw():
         return 0
-    # Discourage repetition (prevents endless shuffling)
+    # Discourage repetition (negative for side to move)
     if board.is_repetition(2):
         return -30 if board.turn == chess.WHITE else 30
 
     score = 0
 
-    # Material + PST
+    # Material + piece-square tables
     for piece_type, value in PIECE_VALUES.items():
         pst = PST[piece_type]
 
         for sq in board.pieces(piece_type, chess.WHITE):
             score += value
-            score += pst[sq]  # white uses table as-is
+            score += pst[sq]  # white pieces use PST as-is
 
         for sq in board.pieces(piece_type, chess.BLACK):
             score -= value
-            score -= pst[chess.square_mirror(sq)]  # mirror for black
+            score -= pst[chess.square_mirror(sq)]  # black pieces use mirrored PST
 
     return score
 
-
+# Returns positive if side to move is better, negative if worse.
 def evaluate_side_to_move(board: chess.Board) -> int:
     base = evaluate_white(board)
     return base if board.turn == chess.WHITE else -base

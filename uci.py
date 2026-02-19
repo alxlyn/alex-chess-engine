@@ -8,17 +8,17 @@ from engine.search import choose_move, choose_move_timed
 ENGINE_NAME = "alex-chess-engine"
 AUTHOR = "Alex"
 
-
+# UCI (Universal Chess Interface) protocol implementation. This allows the engine to communicate with GUIs and other chess software that support UCI.
 def parse_position(cmd: str) -> chess.Board:
     parts = cmd.split()
     board = chess.Board()
 
-    # position startpos moves ...
+    # position startpos moves
     if "startpos" in parts:
         board = chess.Board()
         moves_index = parts.index("startpos") + 1
 
-    # position fen <fen> moves ...
+    # position fen <fen> moves 
     elif "fen" in parts:
         fen_index = parts.index("fen") + 1
         fen = " ".join(parts[fen_index:fen_index + 6])
@@ -27,21 +27,15 @@ def parse_position(cmd: str) -> chess.Board:
 
     else:
         return board
-
+    # If there are moves specified after the position, play them on the board.
     if moves_index < len(parts) and parts[moves_index] == "moves":
         for mv in parts[moves_index + 1:]:
             board.push_uci(mv)
 
     return board
 
-
+# Basic time management:
 def pick_time_limit(board: chess.Board, parts: list[str]) -> float | None:
-    """
-    Basic time management:
-    - If movetime is provided, use it.
-    - Else if wtime/btime provided, use a small fraction of remaining time.
-    Returns seconds or None.
-    """
     if "movetime" in parts:
         ms = int(parts[parts.index("movetime") + 1])
         return max(0.01, ms / 1000.0)
@@ -49,7 +43,6 @@ def pick_time_limit(board: chess.Board, parts: list[str]) -> float | None:
     # Use remaining time if provided
     wtime = btime = None
     winc = binc = 0
-
     if "wtime" in parts:
         wtime = int(parts[parts.index("wtime") + 1])
     if "btime" in parts:
@@ -62,22 +55,23 @@ def pick_time_limit(board: chess.Board, parts: list[str]) -> float | None:
     if wtime is None or btime is None:
         return None
 
-    # pick side-to-move time
+    # Pick a time limit based on remaining time and increment. 
     time_ms = wtime if board.turn == chess.WHITE else btime
     inc_ms = winc if board.turn == chess.WHITE else binc
 
-    # very simple budgeting: 1/30 of remaining time + 50% of increment
+    # time buget: 1/30 of remaining time + 50% of increment
     think_ms = (time_ms / 30.0) + (0.5 * inc_ms)
-    think_ms = min(think_ms, time_ms * 0.25)  # never spend >25% of remaining
-    think_ms = max(think_ms, 20)              # at least 20ms
+    think_ms = min(think_ms, time_ms * 0.25)  # never spend >25% of time remaining
+    think_ms = max(think_ms, 20)              # at least 20ms to think
 
     return think_ms / 1000.0
 
-
+# The main UCI loop. We read commands from stdin, process them, and write responses to stdout. 
+# This allows the engine to interact with GUIs and other chess software that support UCI.
 def uci_loop():
     board = chess.Board()
     default_depth = 3
-
+    # We read lines from stdin until we get a "quit" command. 
     while True:
         line = sys.stdin.readline()
         if not line:
@@ -101,12 +95,11 @@ def uci_loop():
         elif line.startswith("go"):
             parts = line.split()
 
-            # Depth mode
             depth = default_depth
             if "depth" in parts:
                 depth = int(parts[parts.index("depth") + 1])
 
-            # Time mode (movetime or clocks)
+            # Time mode takes precedence over depth mode.
             time_limit = pick_time_limit(board, parts)
 
             if time_limit is not None:

@@ -1,6 +1,6 @@
 import chess
 from engine.search import choose_move
-
+# This is a simple self-play function that makes the engine play against itself for a given number of plies and search depth. It prints the moves and the final result.
 def self_play(plies: int = 60, depth: int = 3):
     board = chess.Board()
     for i in range(plies):
