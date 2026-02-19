@@ -75,21 +75,29 @@ def _capture_moves(board: chess.Board):
     moves.sort(key=mvv_lva_key, reverse=True)
     return moves
 
-def quiescence(board: chess.Board, alpha: int, beta: int) -> int:
+def quiescence(board: chess.Board, alpha: int, beta: int, qdepth: int = 0) -> int:
     """
-    Extend search at leaf nodes by exploring only captures.
-    Prevents the horizon effect.
+    Quiescence search: only explore tactical moves (captures) at the leaf.
+    Adds a hard depth cap so it can't explode forever.
     """
     stand_pat = evaluate_side_to_move(board)
 
+    # Hard stop to prevent infinite recursion in crazy positions (e.g. perpetual check)
+    if qdepth >= 8:
+        return stand_pat
+
+    # Fail-hard beta cutoff if the static eval is already too good for the side to move
     if stand_pat >= beta:
         return beta
+
+    # Improve alpha with static eval if it's better than current alpha
     if stand_pat > alpha:
         alpha = stand_pat
 
+    # Explore captures only 
     for move in _capture_moves(board):
         board.push(move)
-        score = -quiescence(board, -beta, -alpha)
+        score = -quiescence(board, -beta, -alpha, qdepth + 1)
         board.pop()
 
         if score >= beta:
@@ -98,6 +106,7 @@ def quiescence(board: chess.Board, alpha: int, beta: int) -> int:
             alpha = score
 
     return alpha
+
 
 
 def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None):
@@ -161,6 +170,7 @@ def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None
 
 
 def choose_move(board: chess.Board, depth: int = 3, deadline=None):
+    TT.clear()
     best_move = None
     best_score = -math.inf
     alpha, beta = -INF, INF
