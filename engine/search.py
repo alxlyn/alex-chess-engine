@@ -20,7 +20,8 @@ PIECE_VALUES = {
 }
 
 def tt_key(board: chess.Board):
-    return board.fen()
+    return board.fen().split(" ", 4)[:4]
+
 
 
 
@@ -99,7 +100,10 @@ def quiescence(board: chess.Board, alpha: int, beta: int) -> int:
     return alpha
 
 
-def negamax(board: chess.Board, depth: int, alpha: int, beta: int):
+def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None):
+    if deadline is not None and time.time() >= deadline:
+        raise TimeoutError
+
     if board.is_game_over(claim_draw=True):
         return evaluate_side_to_move(board)
 
@@ -129,7 +133,7 @@ def negamax(board: chess.Board, depth: int, alpha: int, beta: int):
 
     for move in ordered_moves(board):
         board.push(move)
-        score = -negamax(board, depth - 1, -beta, -alpha)
+        score = -negamax(board, depth - 1, -beta, -alpha, deadline)
         board.pop()
 
         if score > best:
@@ -156,14 +160,14 @@ def negamax(board: chess.Board, depth: int, alpha: int, beta: int):
     return best
 
 
-def choose_move(board: chess.Board, depth: int = 3):
+def choose_move(board: chess.Board, depth: int = 3, deadline=None):
     best_move = None
     best_score = -math.inf
     alpha, beta = -INF, INF
 
     for move in ordered_moves(board):
         board.push(move)
-        score = -negamax(board, depth - 1, -beta, -alpha)
+        score = -negamax(board, depth - 1, -beta, -alpha, deadline)
         board.pop()
 
         if score > best_score:
@@ -178,21 +182,23 @@ def choose_move(board: chess.Board, depth: int = 3):
 
     return best_move
 
-
 def choose_move_timed(board: chess.Board, time_limit_s: float):
-    start = time.time()
+    deadline = time.time() + time_limit_s * 0.97
     best_move = None
     depth = 1
 
     while True:
-        if time.time() - start > time_limit_s * 0.97:
+        if time.time() >= deadline:
             break
         if depth > 6:
             break
 
-        move = choose_move(board, depth)
-        best_move = move
-        depth += 1
+        try:
+            move = choose_move(board, depth=depth, deadline=deadline)
+            best_move = move
+            depth += 1
+        except TimeoutError:
+            break
 
     if best_move is None:
         best_move = next(iter(board.legal_moves))

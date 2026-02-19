@@ -1,3 +1,5 @@
+#!/Users/alxlyan/Desktop/alex-chess-engine/.venv/bin/python
+
 import sys
 import chess
 
