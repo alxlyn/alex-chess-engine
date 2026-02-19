@@ -20,7 +20,8 @@ PIECE_VALUES = {
 }
 
 def tt_key(board: chess.Board):
-    return board.fen().split(" ", 4)[:4]
+    return tuple(board.fen().split(" ", 4)[:4])
+
 
 
 
@@ -170,7 +171,6 @@ def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None
 
 
 def choose_move(board: chess.Board, depth: int = 3, deadline=None):
-    TT.clear()
     best_move = None
     best_score = -math.inf
     alpha, beta = -INF, INF
