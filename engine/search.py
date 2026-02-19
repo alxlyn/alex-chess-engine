@@ -10,7 +10,14 @@ INF = 10_000_000
 # key -> (depth, flag, value, best_move_uci)
 # flag: "EXACT", "LOWER", "UPPER"
 TT = {}
-
+PIECE_VALUES = {
+    chess.PAWN: 100,
+    chess.KNIGHT: 320,
+    chess.BISHOP: 330,
+    chess.ROOK: 500,
+    chess.QUEEN: 900,
+    chess.KING: 20000,
+}
 
 def tt_key(board: chess.Board):
     return board.fen()
@@ -52,7 +59,26 @@ def ordered_moves(board: chess.Board):
     return moves
 
 
-def quiescence(board: chess.Board, alpha: int, beta: int):
+def _capture_moves(board: chess.Board):
+    """Return legal captures, roughly ordered (good captures first)."""
+    moves = [m for m in board.legal_moves if board.is_capture(m)]
+
+    def mvv_lva_key(m: chess.Move):
+        victim = board.piece_at(m.to_square)
+        attacker = board.piece_at(m.from_square)
+        v = PIECE_VALUES.get(victim.piece_type, 0) if victim else 0
+        a = PIECE_VALUES.get(attacker.piece_type, 0) if attacker else 0
+        # bigger victim and smaller attacker first
+        return (v * 100 - a)
+
+    moves.sort(key=mvv_lva_key, reverse=True)
+    return moves
+
+def quiescence(board: chess.Board, alpha: int, beta: int) -> int:
+    """
+    Extend search at leaf nodes by exploring only captures.
+    Prevents the horizon effect.
+    """
     stand_pat = evaluate_side_to_move(board)
 
     if stand_pat >= beta:
@@ -60,10 +86,7 @@ def quiescence(board: chess.Board, alpha: int, beta: int):
     if stand_pat > alpha:
         alpha = stand_pat
 
-    for move in board.legal_moves:
-        if not board.is_capture(move):
-            continue
-
+    for move in _capture_moves(board):
         board.push(move)
         score = -quiescence(board, -beta, -alpha)
         board.pop()
@@ -164,6 +187,8 @@ def choose_move_timed(board: chess.Board, time_limit_s: float):
     while True:
         if time.time() - start > time_limit_s * 0.97:
             break
+        if depth > 6:
+            break
 
         move = choose_move(board, depth)
         best_move = move
@@ -173,3 +198,4 @@ def choose_move_timed(board: chess.Board, time_limit_s: float):
         best_move = next(iter(board.legal_moves))
 
     return best_move
+
