@@ -43,16 +43,16 @@ from scratch and building a working engine architecture.
 
 ## Quick Start
 # Clone Repo
-git clone https://github.com/alxlyn/alex-chess-engine.git
-cd alex-chess-engine
+- git clone https://github.com/alxlyn/alex-chess-engine.git
+- cd alex-chess-engine
 
 # Virtual Environment and Dependencies
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+- python3 -m venv .venv
+- source .venv/bin/activate
+- pip install -r requirements.txt
 
 # Run Engine Directly
-python uci.py
+- python uci.py
 
 # Run in GUI (supports Banksia, Arena, etc)
 1. Open your chess GUI
@@ -61,16 +61,16 @@ python uci.py
 4. Start a game
 
 # The engine supports:
-go depth N
-go movetime X
-go wtime/btime
+- go depth N
+- go movetime X
+- go wtime/btime
 
 ## Project Structure
-engine/
-  search.py        # Alpha-beta, quiescence, TT, move ordering
-  evaluation.py    # Static evaluation
-uci.py             # UCI protocol loop
-run_engine.sh      # GUI launcher script
+- engine/
+-   search.py        # Alpha-beta, quiescence, TT, move ordering
+-   evaluation.py    # Static evaluation
+- uci.py             # UCI protocol loop
+- run_engine.sh      # GUI launcher script
 
 ## Known Limitations
 1. Not optimized for maximum speed
