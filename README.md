@@ -1,6 +1,6 @@
 # alex-chess-engine
 
-A UCI-compatible chess engine in ~500 lines of Python: negamax search with alpha-beta pruning, iterative deepening under a real clock, quiescence search, and a transposition table - built from scratch to understand how chess engines actually work, and small enough to read in one sitting.
+A UCI-compatible chess engine in Python: negamax search with alpha-beta pruning, iterative deepening under a real clock, quiescence search, and a transposition table - built to learn how chess engines work. About 500 lines, so it reads in one sitting.
 
 ![Engine demo](assets/ENGINE_DEMO.gif)
 
@@ -36,7 +36,7 @@ Material count plus piece-square tables (mirrored for Black), with terminal hand
 - Iterative deepening runs depth 1→6 (capped at 6, which it does not reach in practice); fixed-depth mode defaults to depth 3.
 - Midgame positions complete depth 3 in about 0.7-2 s and depth 4 in 4-14 s on an M2 (iterative deepening from a cold transposition table, five midgame positions). Within a 0.5-1.5 s move budget the timed search reaches depth 2-3.
 - The demo above is the engine playing Stockfish 15.1 in Banksia on a 1-minute clock.
-- No fishing for Elo here: the engine has no opening book, no endgame tables, and a material-plus-PST evaluation. It plays coherent, tactical chess; it will not beat Stockfish.
+- I haven't measured its Elo: the engine has no opening book, no endgame tables, and a material-plus-PST evaluation. It plays coherent, tactical chess; it will not beat Stockfish.
 
 ## Running it
 
@@ -78,4 +78,4 @@ main.py          # self-play harness
 - Python 3.10+ (uses modern type syntax)
 - [python-chess](https://python-chess.readthedocs.io/) - board representation, legal move generation, FEN handling (see `requirements.txt`)
 
-Search, evaluation, ordering, and the UCI layer are hand-written; python-chess supplies the rules of chess, not the brain.
+Search, evaluation, move ordering and the UCI layer live in this repo; python-chess supplies board representation and legal move generation.
