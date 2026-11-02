@@ -1,42 +1,36 @@
 # alex-chess-engine
 
-A UCI-compatible chess engine in Python: negamax search with alpha-beta pruning, iterative deepening under a real clock, quiescence search, and a transposition table - built to learn how chess engines work. About 500 lines, so it reads in one sitting.
+A UCI chess engine in Python that I wrote to learn how engines search. It uses negamax with alpha-beta pruning, iterative deepening under a clock, quiescence search and a transposition table. The whole thing is about 450 lines.
 
 ![Engine demo](assets/ENGINE_DEMO.gif)
 
-## How it thinks
+## How the search works
 
-One move decision flows through five layers, each solving a specific failure mode of the one before it:
+The engine searches to depth 1, then 2, then 3, and keeps the best move from the last depth it finished. On a clock you don't know how long the next depth will take, so this way there is always a complete answer when time runs out. Under UCI time controls a move gets `remaining/30 + increment/2`, capped at a quarter of the remaining time. A deadline check inside the search raises `TimeoutError` at 97% of that budget, and the unfinished depth is thrown away.
 
-```
-time budget → iterative deepening → negamax + alpha-beta → move ordering → quiescence → evaluation
-                                          ↕ transposition table
-```
+Negamax scores every position from the side to move and negates the child's score, so min and max share one function. Alpha-beta cuts branches that can't change the result, which is what makes depth 3 or 4 possible in Python at all.
 
-**Iterative deepening + deadline time management** (`choose_move_timed`, `pick_time_limit`).
-The engine searches to depth 1, then 2, then 3… instead of committing to a single deep search. Why: on a clock you never know in advance how long depth N will take. Deepening incrementally guarantees a fully-searched best move is always in hand when time expires. The per-move budget under UCI time controls is `remaining/30 + increment/2`, capped at 25% of the remaining clock; the search hard-stops at 97% of that budget via a deadline check inside the tree (a `TimeoutError` unwinds the recursion, and the half-finished iteration is discarded in favor of the last completed one).
+Pruning works better when good moves come first. The main search tries the transposition table's stored move first, then captures and checks, then quiet moves. Quiescence orders captures by MVV-LVA, so taking a queen with a pawn is looked at before taking a pawn with a queen.
 
-**Negamax with alpha-beta pruning** (`negamax`).
-Negamax is minimax collapsed into a single recursive function: every node scores the position from the side-to-move's perspective and negates the child's result. Why: one code path instead of mirrored min/max logic - fewer places for sign bugs. Alpha-beta maintains a window of scores that can still matter and cuts off any branch proven irrelevant to the final choice, which is what makes depth 3-4 reachable in pure Python at all.
+At depth 0 the engine keeps searching captures, up to 8 more plies, until the position is quiet. Without that it would stop in the middle of an exchange and evaluate a position where a queen is about to be lost.
 
-**Move ordering** (`ordered_moves`, `_capture_moves`).
-Alpha-beta only prunes well when strong moves are tried early - the sooner a good move raises alpha, the more of the remaining tree gets cut. So the main search tries the transposition table's remembered best move first, then captures and checks ahead of quiet moves. Inside quiescence, captures are sorted by MVV-LVA (most valuable victim, least valuable attacker): winning a queen with a pawn is examined before winning a pawn with a queen.
+The transposition table is a dict keyed on the first four FEN fields (pieces, side to move, castling rights and en passant square). Each entry stores the depth, score, a bound flag (`EXACT`, `LOWER` or `UPPER`) and the best move. FEN keys are slower than Zobrist hashing, but they were easier to get right and to debug.
 
-**Quiescence search** (`quiescence`).
-At depth 0 the engine does not evaluate immediately - it keeps searching captures (up to 8 extra plies) until the position is quiet. Why: the horizon effect. A fixed-depth search that stops mid-exchange - right after QxP, one ply before the pawn recaptures the queen - reports a fantasy score. Quiescence makes leaf evaluations tactically stable.
-
-**Transposition table** (`TT`, `tt_key`).
-A dictionary keyed on the first four FEN fields (piece placement, side to move, castling rights, en passant square), storing depth, score, a bound flag (`EXACT`/`LOWER`/`UPPER`), and the best move found. Why: the same position is reached through many move orders, and iterative deepening revisits every position at each new depth. Cached results skip re-search, and the stored best move seeds move ordering on the next visit. FEN keys were a deliberate trade: slower than Zobrist hashing, but trivially correct and debuggable.
-
-**Evaluation** (`engine/evaluation.py`).
-Material count plus piece-square tables (mirrored for Black), with terminal handling for checkmate, stalemate, and insufficient material, and a small penalty for repetition. Intentionally simple - this project is about the search.
+Evaluation is material plus piece-square tables, mirrored for Black. It handles checkmate, stalemate and insufficient material, and gives a small penalty for repeating a position. The evaluation is deliberately simple because the search was the part I wanted to learn.
 
 ## Measured behavior
 
-- Iterative deepening runs depth 1→6 (capped at 6, which it does not reach in practice); fixed-depth mode defaults to depth 3.
-- Midgame positions complete depth 3 in about 0.7-2 s and depth 4 in 4-14 s on an M2 (iterative deepening from a cold transposition table, five midgame positions). Within a 0.5-1.5 s move budget the timed search reaches depth 2-3.
-- The demo above is the engine playing Stockfish 15.1 in Banksia on a 1-minute clock.
-- I haven't measured its Elo: the engine has no opening book, no endgame tables, and a material-plus-PST evaluation. It plays coherent, tactical chess; it will not beat Stockfish.
+- Iterative deepening stops at depth 6, which it doesn't reach in practice. Fixed-depth mode defaults to depth 3.
+- On an M2, middlegame positions finish depth 3 in about 0.7 to 2 seconds and depth 4 in 4 to 14 seconds (cold transposition table, five positions). With a 0.5 to 1.5 second budget per move, the timed search reaches depth 2 or 3.
+- The demo above is the engine playing Stockfish 15.1 in Banksia on a 1-minute clock. It has no opening book or endgame tables and it won't beat Stockfish. I haven't measured its Elo.
+
+## Known issues
+
+- When the transposition table has no move for a position, `ordered_moves` keeps the first legal move in front and only sorts the rest.
+- The root search doesn't store its best move in the table, so the next depth doesn't try the previous best move first.
+- `ucinewgame` resets the board but doesn't clear the transposition table.
+- If time runs out during depth 1, the board is left with a move still pushed, and the fallback picks its move from that board.
+- There are no tests yet.
 
 ## Running it
 
@@ -47,20 +41,20 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-**In a chess GUI (Banksia or any UCI GUI):** add a new UCI engine, set the command to the venv's Python and the argument to `uci.py`:
+In Banksia or any other UCI GUI, add a new engine with the venv's Python as the command and `uci.py` as the argument:
 
 ```
 Command:   /path/to/alex-chess-engine/.venv/bin/python
 Argument:  /path/to/alex-chess-engine/uci.py
 ```
 
-The engine answers the standard handshake (`uci`, `isready`, `ucinewgame`, `position startpos|fen … moves …`) and supports `go depth N`, `go movetime <ms>`, and clock mode `go wtime/btime [winc/binc]` - time mode takes precedence over depth.
+The engine supports `uci`, `isready`, `ucinewgame`, `position startpos|fen ... moves ...`, `go depth N`, `go movetime <ms>` and clock mode with `go wtime/btime [winc/binc]`. When a clock is given it takes precedence over depth.
 
-**From the terminal:**
+From the terminal:
 
 ```bash
-python uci.py     # raw UCI loop on stdin/stdout - type the commands yourself
-python main.py    # self-play harness: the engine plays itself and prints each move
+python uci.py     # UCI loop on stdin/stdout, type the commands yourself
+python main.py    # the engine plays itself and prints each move
 ```
 
 ## Project layout
@@ -70,12 +64,9 @@ engine/
   search.py      # negamax, alpha-beta, quiescence, move ordering, TT, iterative deepening
   evaluation.py  # material + piece-square tables
 uci.py           # UCI protocol loop and time-control parsing
-main.py          # self-play harness
+main.py          # self-play
 ```
 
 ## Requirements
 
-- Python 3.10+ (uses modern type syntax)
-- [python-chess](https://python-chess.readthedocs.io/) - board representation, legal move generation, FEN handling (see `requirements.txt`)
-
-Search, evaluation, move ordering and the UCI layer live in this repo; python-chess supplies board representation and legal move generation.
+Python 3.10 or newer and [python-chess](https://python-chess.readthedocs.io/), which handles the board, legal move generation and FEN. Search, evaluation, move ordering and the UCI layer live in this repo.
