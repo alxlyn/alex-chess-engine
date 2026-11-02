@@ -1,4 +1,4 @@
-#!/Users/alxlyan/Desktop/alex-chess-engine/.venv/bin/python
+#!/usr/bin/env python3
 
 import sys
 import chess
