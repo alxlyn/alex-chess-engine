@@ -29,7 +29,10 @@ Evaluation is material plus piece-square tables, mirrored for Black. It handles 
 - When the transposition table has no move for a position, `ordered_moves` keeps the first legal move in front and only sorts the rest.
 - The root search doesn't store its best move in the table, so the next depth doesn't try the previous best move first.
 - `ucinewgame` resets the board but doesn't clear the transposition table.
-- If time runs out during depth 1, the board is left with a move still pushed, and the fallback picks its move from that board.
+- A timeout leaves the moves that were being searched pushed on the board. After depth 1 the engine still returns the last finished depth's move and the next `position` command rebuilds the board, but a timeout during depth 1 makes the fallback pick its move from the wrong position.
+- Quiescence search doesn't check the deadline, so a long capture sequence can run past the time budget.
+- Mate scores are a flat 10,000 with no ply adjustment, so the engine doesn't prefer a faster mate.
+- Draw and repetition scores depend on move history, but the transposition table key doesn't include it.
 - There are no tests yet.
 
 ## Running it
