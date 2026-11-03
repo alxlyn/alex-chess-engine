@@ -13,7 +13,7 @@ PIECE_VALUES = {
 # The tables are written rank 8 first, the way a board is drawn. python-chess
 # numbers squares from a1 = 0, so White reads them through square_mirror.
 # Values are in centipawns (like piece values).
-# PSTs are a common way to give positional bonuses/penalties based on piece location.
+# The numbers are from Tomasz Michniewski's "Simplified Evaluation Function" (Chess Programming Wiki).
 PST_PAWN = [
      0,  0,  0,  0,  0,  0,  0,  0,
     50, 50, 50, 50, 50, 50, 50, 50,

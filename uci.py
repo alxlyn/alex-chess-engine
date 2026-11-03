@@ -8,7 +8,7 @@ from engine.search import TT, choose_move, choose_move_timed
 ENGINE_NAME = "alex-chess-engine"
 AUTHOR = "Alex"
 
-# UCI (Universal Chess Interface) protocol implementation. This allows the engine to communicate with GUIs and other chess software that support UCI.
+# UCI front end: reads commands from a chess GUI on stdin and answers on stdout.
 def parse_position(cmd: str) -> chess.Board:
     parts = cmd.split()
     board = chess.Board()
@@ -57,7 +57,6 @@ def pick_time_limit(board: chess.Board, parts: list[str]) -> float | None:
     time_ms = wtime if board.turn == chess.WHITE else btime
     inc_ms = winc if board.turn == chess.WHITE else binc
 
-    # time buget: 1/30 of remaining time + 50% of increment
     # time buget: 1/30 of remaining time + 50% of increment
     think_ms = (time_ms / 30.0) + (0.5 * inc_ms)
     think_ms = max(think_ms, 20)

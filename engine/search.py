@@ -23,6 +23,10 @@ PIECE_VALUES = {
     chess.QUEEN: 900,
     chess.KING: 20000,
 }
+
+
+# Mate scores count plies from the root, but the same position can come up at a
+# different ply, so the table stores them relative to the node instead.
 def to_tt(score: int, ply: int) -> int:
     if score > MATE_BOUND:
         return score + ply
@@ -53,8 +57,7 @@ def ordered_moves(board: chess.Board):
     return sorted(board.legal_moves, key=sort_key, reverse=True)
 
 # MVV/LVA capture ordering
-# This is a common heuristic to order captures, trying the most "valuable" ones first 
-# (e.g. capturing a queen with a pawn is usually better than capturing a pawn with a queen).
+# Biggest victim first, cheapest attacker first (pawn takes queen before queen takes pawn).
 def _capture_moves(board: chess.Board):
     moves = [m for m in board.legal_moves if board.is_capture(m)]
     def mvv_lva_key(m: chess.Move):
@@ -135,7 +138,7 @@ def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None
     best = -math.inf
     best_move_uci = None
 
-    # Move ordering is crucial for alpha-beta efficiency. 
+    # Better moves first means more cutoffs.
     for move in ordered_moves(board):
         board.push(move)
         score = -negamax(board, depth - 1, -beta, -alpha, deadline, ply + 1)
