@@ -96,10 +96,7 @@ def evaluate_white(board: chess.Board) -> int:
         return -10_000 if board.turn == chess.WHITE else 10_000
     if board.is_stalemate() or board.is_insufficient_material() or board.can_claim_draw():
         return 0
-    # Discourage repetition (negative for side to move)
-    if board.is_repetition(2):
-        return -30 if board.turn == chess.WHITE else 30
-
+        
     score = 0
 
     # Material + piece-square tables

@@ -28,3 +28,9 @@ def test_black_mirrors_white():
     white_pawn_e2 = score("4k3/8/8/8/8/8/4P3/4K3 w - - 0 1")
     black_pawn_e7 = score("4k3/4p3/8/8/8/8/8/4K3 w - - 0 1")
     assert white_pawn_e2 == -black_pawn_e7
+
+def test_repetition_does_not_wipe_out_material():
+    board = chess.Board("4k3/8/8/8/8/8/3Q4/4K3 w - - 0 1")
+    for move in ["d2c2", "e8f8", "c2d2", "f8e8"]:
+        board.push_uci(move)
+    assert evaluate_white(board) > 800

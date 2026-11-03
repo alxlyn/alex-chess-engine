@@ -127,6 +127,10 @@ def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None
         raise TimeoutError
     if board.is_checkmate():
         return -(MATE - ply)
+    # A position that repeats inside the search is scored as a draw. Return before the
+    # table is read or written: the table key has no move history.
+    if board.is_repetition(2):
+        return 0
     if board.is_game_over(claim_draw=True):
         return evaluate_side_to_move(board)
     if depth == 0:
@@ -232,7 +236,7 @@ def choose_move_timed(board: chess.Board, time_limit_s: float):
             break
         if clock() >= deadline:
             break
-            
+
     return best_move
 
 
