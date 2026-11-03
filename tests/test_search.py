@@ -78,3 +78,10 @@ def test_fifty_moves_without_a_capture_is_a_draw():
 
     board = chess.Board("4k3/8/8/8/8/8/3Q4/4K3 w - - 100 80")
     assert negamax(board, 2, -INF, INF) == 0
+
+
+def test_a_mate_found_in_quiescence_is_scored_by_distance():
+    from engine.search import INF, MATE, quiescence
+
+    board = chess.Board("4r2k/6pp/8/8/8/8/6PP/4R1K1 w - - 0 1")  # Rxe8 is mate
+    assert quiescence(board, -INF, INF, ply=3) == MATE - 4

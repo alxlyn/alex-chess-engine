@@ -38,7 +38,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-There are 32 tests, and GitHub Actions runs them on every push. Most of them come from bugs a code review found in November: on a short clock the engine could answer with a move for the wrong side, at depth 3 it missed some mates in one, and White read the piece-square tables upside down. They check piece-square values, mate in one, mate scores in the transposition table, a fake clock that runs out mid-search, repetition and the 50-move rule, move ordering, and the UCI loop (depth 0, no legal moves, bad input, a tiny clock).
+There are 33 tests, and GitHub Actions runs them on every push. Most of them come from bugs an AI code review found in November: on a short clock the engine could answer with a move for the wrong side, at depth 3 it missed some mates in one, and White read the piece-square tables upside down. They check piece-square values, mate in one, mate scores in the transposition table, a fake clock that runs out mid-search, repetition and the 50-move rule, move ordering, and the UCI loop (depth 0, no legal moves, bad input, a tiny clock).
 
 ## Running it
 

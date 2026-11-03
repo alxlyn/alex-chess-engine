@@ -72,11 +72,11 @@ def _capture_moves(board: chess.Board):
 
 # Quiescence search: extends the search at leaf nodes to include captures,
 # to avoid the "horizon effect" where the engine misses a tactical sequence just beyond the search depth.
-def quiescence(board: chess.Board, alpha: int, beta: int, qdepth: int = 0, deadline=None) -> int:
+def quiescence(board: chess.Board, alpha: int, beta: int, qdepth: int = 0, deadline=None, ply: int = 0) -> int:
     if deadline is not None and clock() >= deadline:
         raise TimeoutError
     if board.is_checkmate():  # cheap unless in check
-        return -MATE_BOUND
+        return -(MATE - ply)  # a mate found by a capture is scored by distance too
     stand_pat = evaluate_side_to_move(board)
 
     # Hard limit on quiescence depth to prevent infinite recursion in crazy positions. 
@@ -90,7 +90,7 @@ def quiescence(board: chess.Board, alpha: int, beta: int, qdepth: int = 0, deadl
     #This is the "quiescence" part.
     for move in _capture_moves(board):
         board.push(move)
-        score = -quiescence(board, -beta, -alpha, qdepth + 1, deadline)
+        score = -quiescence(board, -beta, -alpha, qdepth + 1, deadline, ply + 1)
         board.pop()
 
         if score >= beta:
@@ -114,7 +114,7 @@ def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None
     if board.is_repetition(2) or board.halfmove_clock >= 100 or board.is_insufficient_material():
         return 0
     if depth <= 0:
-        return quiescence(board, alpha, beta, 0, deadline)
+        return quiescence(board, alpha, beta, 0, deadline, ply)
 
     key = tt_key(board)
     alpha_orig = alpha
