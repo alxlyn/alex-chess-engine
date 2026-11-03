@@ -91,12 +91,10 @@ PST = {
 
 
 def evaluate_white(board: chess.Board) -> int:
-    # Terminal positions (positive for White, negative for Black)
-    if board.is_checkmate():
-        return -10_000 if board.turn == chess.WHITE else 10_000
-    if board.is_stalemate() or board.is_insufficient_material() or board.can_claim_draw():
+    # Mate, stalemate and repetition are handled in the search; this only scores quiet positions.
+    if board.is_insufficient_material():
         return 0
-        
+
     score = 0
 
     # Material + piece-square tables

@@ -97,6 +97,8 @@ def _capture_moves(board: chess.Board):
 def quiescence(board: chess.Board, alpha: int, beta: int, qdepth: int = 0, deadline=None) -> int:
     if deadline is not None and clock() >= deadline:
         raise TimeoutError
+    if board.is_checkmate():  # cheap unless in check
+        return -MATE_BOUND
     stand_pat = evaluate_side_to_move(board)
 
     # Hard limit on quiescence depth to prevent infinite recursion in crazy positions. 
@@ -125,14 +127,15 @@ def quiescence(board: chess.Board, alpha: int, beta: int, qdepth: int = 0, deadl
 def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None, ply: int = 1):
     if deadline is not None and clock() >= deadline:
         raise TimeoutError
-    if board.is_checkmate():
-        return -(MATE - ply)
-    # A position that repeats inside the search is scored as a draw. Return before the
-    # table is read or written: the table key has no move history.
-    if board.is_repetition(2):
+    # No legal moves: checkmate if in check, otherwise stalemate.
+    if not any(board.generate_legal_moves()):
+        return -(MATE - ply) if board.is_check() else 0
+    # Draws. A repeated position is scored as a draw here, before the table is read or
+    # written, because the table key has no move history. These checks are cheap;
+    # can_claim_draw() tried every legal move at every node and ate most of the time.
+    if board.is_repetition(2) or board.halfmove_clock >= 100 or board.is_insufficient_material():
         return 0
-    if board.is_game_over(claim_draw=True):
-        return evaluate_side_to_move(board)
+        
     if depth == 0:
         return quiescence(board, alpha, beta, 0, deadline)
 
