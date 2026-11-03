@@ -1,6 +1,6 @@
 # alex-chess-engine
 
-A UCI chess engine in Python that I wrote to learn how engines search. It uses negamax with alpha-beta pruning, iterative deepening under a clock, quiescence search and a transposition table. The engine itself is about 490 lines.
+A UCI chess engine in Python that I wrote in February 2026, with AI help, to learn how engines search. It uses negamax with alpha-beta pruning, iterative deepening under a clock, quiescence search and a transposition table. The engine itself is about 490 lines.
 
 ![Engine demo](assets/ENGINE_DEMO.gif)
 
@@ -38,7 +38,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-There are 42 tests, and GitHub Actions runs them on every push. Most of them come from bugs an AI code review found in November: on a short clock the engine could answer with a move for the wrong side, at depth 3 it missed some mates in one, and White read the piece-square tables upside down. They check piece-square values, mate in one, mate scores and bounds in the transposition table, a fake clock that runs out mid-search, repetition and the 50-move rule, move ordering, and the UCI loop (depth 0, no legal moves, bad input, a tiny clock).
+There are 42 tests, and GitHub Actions runs them on every push. Most of them came from an AI code review in November, which found these bugs and gave step-by-step fixes and tests; I made each change by hand, one commit at a time: on a short clock the engine could answer with a move for the wrong side, at depth 3 it missed some mates in one, and White read the piece-square tables upside down. They check piece-square values, mate in one, mate scores and bounds in the transposition table, a fake clock that runs out mid-search, repetition and the 50-move rule, move ordering, and the UCI loop (depth 0, no legal moves, bad input, a tiny clock).
 
 ## Running it
 
