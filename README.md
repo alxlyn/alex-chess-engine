@@ -6,7 +6,7 @@ A UCI chess engine in Python that I wrote to learn how engines search. It uses n
 
 ## How the search works
 
-The engine searches to depth 1, then 2, then 3, and keeps the best move from the last depth it finished. On a clock you don't know how long the next depth will take, so this way there is always a complete answer when time runs out. Under UCI time controls a move gets `remaining/30 + increment/2`, capped at a quarter of the remaining time. A deadline check inside the search raises `TimeoutError` at 97% of that budget, and the unfinished depth is thrown away. If even depth 1 runs out of time, it plays the best move it had searched so far. The search works on a copy of the board, so a timeout never leaves half a line pushed on the real one.
+The engine searches to depth 1, then 2, then 3, and keeps the best move from the last depth it finished. On a clock you don't know how long the next depth will take, so this way there is always a complete answer when time runs out. Under UCI time controls a move gets `remaining/30 + increment/2`, capped at a quarter of the remaining time, after keeping 50 ms back for the GUI and the pipe. A deadline check inside the search raises `TimeoutError` at 97% of that budget, and the unfinished depth is thrown away. If even depth 1 runs out of time, it plays the best move it had searched so far. The search works on a copy of the board, so a timeout never leaves half a line pushed on the real one.
 
 Negamax scores every position from the side to move and negates the child's score, so min and max share one function. Alpha-beta cuts branches that can't change the result, which is what makes depth 3 or 4 possible in Python at all.
 
@@ -38,7 +38,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-There are 33 tests, and GitHub Actions runs them on every push. Most of them come from bugs an AI code review found in November: on a short clock the engine could answer with a move for the wrong side, at depth 3 it missed some mates in one, and White read the piece-square tables upside down. They check piece-square values, mate in one, mate scores in the transposition table, a fake clock that runs out mid-search, repetition and the 50-move rule, move ordering, and the UCI loop (depth 0, no legal moves, bad input, a tiny clock).
+There are 38 tests, and GitHub Actions runs them on every push. Most of them come from bugs an AI code review found in November: on a short clock the engine could answer with a move for the wrong side, at depth 3 it missed some mates in one, and White read the piece-square tables upside down. They check piece-square values, mate in one, mate scores in the transposition table, a fake clock that runs out mid-search, repetition and the 50-move rule, move ordering, and the UCI loop (depth 0, no legal moves, bad input, a tiny clock).
 
 ## Running it
 

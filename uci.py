@@ -57,9 +57,12 @@ def pick_time_limit(board: chess.Board, parts: list[str]) -> float | None:
     time_ms = wtime if board.turn == chess.WHITE else btime
     inc_ms = winc if board.turn == chess.WHITE else binc
 
+    # Keep 50 ms back for the GUI and the pipe. Without it a long game on a short
+    # clock ran out of time, because every move costs a little more than it thinks.
+    time_ms = max(0, time_ms - 50)
     # time buget: 1/30 of remaining time + 50% of increment
     think_ms = (time_ms / 30.0) + (0.5 * inc_ms)
-    think_ms = max(think_ms, 20)
+    think_ms = max(think_ms, min(20, time_ms * 0.05))
     # The cap comes last, so even a clock under 80 ms is never overspent.
     think_ms = min(think_ms, time_ms * 0.25)
 

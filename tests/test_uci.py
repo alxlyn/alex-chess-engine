@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import chess
+import pytest
 
 from engine import search
 from uci import handle, pick_time_limit
@@ -49,6 +50,20 @@ def test_a_bad_position_is_not_answered_with_the_old_board():
 def test_a_tiny_clock_is_never_overspent():
     limit = pick_time_limit(chess.Board(), "go wtime 10 btime 10".split())
     assert limit <= 0.0025
+
+
+BLACK_TO_MOVE = "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"
+
+
+@pytest.mark.parametrize("fen,command,seconds", [
+    (chess.STARTING_FEN, "go movetime 200", 0.2),
+    (chess.STARTING_FEN, "go wtime 60050 btime 1050", 2.0),                 # (60050 - 50) / 30 ms
+    (BLACK_TO_MOVE, "go wtime 60050 btime 3050", 0.1),                      # Black uses its own clock
+    (chess.STARTING_FEN, "go wtime 60050 btime 60050 winc 1000 binc 0", 2.5),  # plus half the increment
+    (chess.STARTING_FEN, "go wtime 40 btime 40", 0.0),                      # all of it is reserve
+])
+def test_time_limits(fen, command, seconds):
+    assert pick_time_limit(chess.Board(fen), command.split()) == pytest.approx(seconds)
 
 
 def test_ucinewgame_clears_the_table():
