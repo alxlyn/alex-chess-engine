@@ -5,6 +5,9 @@ import chess
 from engine.evaluation import evaluate_side_to_move
 # Negamax search with alpha-beta pruning and a transposition table.
 INF = 10_000_000
+# A mate scores MATE minus the plies it takes, so a faster mate is worth more.
+MATE = 100_000
+MATE_BOUND = MATE - 1_000  # anything above this is a mate score
 
 # Transposition Table:
 # key -> (depth, flag, value, best_move_uci)
@@ -18,7 +21,22 @@ PIECE_VALUES = {
     chess.QUEEN: 900,
     chess.KING: 20000,
 }
-# PSTs are defined in evaluation.py, but we need them here for move ordering.
+def to_tt(score: int, ply: int) -> int:
+    if score > MATE_BOUND:
+        return score + ply
+    if score < -MATE_BOUND:
+        return score - ply
+    return score
+
+
+def from_tt(score: int, ply: int) -> int:
+    if score > MATE_BOUND:
+        return score - ply
+    if score < -MATE_BOUND:
+        return score + ply
+    return score
+
+
 def tt_key(board: chess.Board):
     return tuple(board.fen().split(" ", 4)[:4])
 
@@ -100,9 +118,11 @@ def quiescence(board: chess.Board, alpha: int, beta: int, qdepth: int = 0) -> in
 
 
 # Negamax search with alpha-beta pruning and a transposition table. Returns the score from the perspective of the side to move.
-def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None):
+def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None, ply: int = 1):
     if deadline is not None and time.time() >= deadline:
         raise TimeoutError
+    if board.is_checkmate():
+        return -(MATE - ply)
     if board.is_game_over(claim_draw=True):
         return evaluate_side_to_move(board)
     if depth == 0:
@@ -116,6 +136,7 @@ def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None
     entry = TT.get(key)
     if entry is not None:
         tt_depth, flag, val, _ = entry
+        val = from_tt(val, ply)
         if tt_depth >= depth:
             if flag == "EXACT":
                 return val
@@ -132,7 +153,7 @@ def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None
     # Move ordering is crucial for alpha-beta efficiency. 
     for move in ordered_moves(board):
         board.push(move)
-        score = -negamax(board, depth - 1, -beta, -alpha, deadline)
+        score = -negamax(board, depth - 1, -beta, -alpha, deadline, ply + 1)
         board.pop()
 
         if score > best:
@@ -154,7 +175,7 @@ def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None
     else:
         flag = "EXACT"
 
-    TT[key] = (depth, flag, best, best_move_uci)
+    TT[key] = (depth, flag, to_tt(best, ply), best_move_uci)
 
     return best
 
