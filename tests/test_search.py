@@ -85,3 +85,34 @@ def test_a_mate_found_in_quiescence_is_scored_by_distance():
 
     board = chess.Board("4r2k/6pp/8/8/8/8/6PP/4R1K1 w - - 0 1")  # Rxe8 is mate
     assert quiescence(board, -INF, INF, ply=3) == MATE - 4
+
+
+def test_a_stored_lower_bound_at_or_above_beta_cuts_off():
+    from engine.search import INF, TT, negamax, tt_key
+
+    board = chess.Board()
+    TT[tt_key(board)] = (5, "LOWER", 500, None)  # searched deeper before: worth at least 500
+    assert negamax(board, 2, -INF, 400) >= 400
+
+
+def test_a_stored_upper_bound_at_or_below_alpha_cuts_off():
+    from engine.search import INF, TT, negamax, tt_key
+
+    board = chess.Board()
+    TT[tt_key(board)] = (5, "UPPER", -500, None)  # worth at most -500
+    assert negamax(board, 2, -400, INF) <= -400
+
+
+def test_a_shallower_entry_is_not_trusted():
+    from engine.search import INF, TT, negamax, tt_key
+
+    board = chess.Board()
+    TT[tt_key(board)] = (1, "EXACT", 12345, None)
+    assert negamax(board, 2, -INF, INF) != 12345
+
+
+def test_losing_mate_scores_convert_both_ways():
+    from engine.search import MATE, from_tt, to_tt
+
+    assert to_tt(-(MATE - 5), 3) == -(MATE - 2)
+    assert from_tt(to_tt(-(MATE - 5), 3), 3) == -(MATE - 5)
