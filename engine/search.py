@@ -5,6 +5,8 @@ import chess
 from engine.evaluation import evaluate_side_to_move
 # Negamax search with alpha-beta pruning and a transposition table.
 INF = 10_000_000
+# The search reads time through this name, so tests can swap in a fake clock.
+clock = time.monotonic
 # A mate scores MATE minus the plies it takes, so a faster mate is worth more.
 MATE = 100_000
 MATE_BOUND = MATE - 1_000  # anything above this is a mate score
@@ -92,7 +94,9 @@ def _capture_moves(board: chess.Board):
 
 # Quiescence search: extends the search at leaf nodes to include captures,
 # to avoid the "horizon effect" where the engine misses a tactical sequence just beyond the search depth.
-def quiescence(board: chess.Board, alpha: int, beta: int, qdepth: int = 0) -> int:
+def quiescence(board: chess.Board, alpha: int, beta: int, qdepth: int = 0, deadline=None) -> int:
+    if deadline is not None and clock() >= deadline:
+        raise TimeoutError
     stand_pat = evaluate_side_to_move(board)
 
     # Hard limit on quiescence depth to prevent infinite recursion in crazy positions. 
@@ -106,7 +110,7 @@ def quiescence(board: chess.Board, alpha: int, beta: int, qdepth: int = 0) -> in
     #This is the "quiescence" part.
     for move in _capture_moves(board):
         board.push(move)
-        score = -quiescence(board, -beta, -alpha, qdepth + 1)
+        score = -quiescence(board, -beta, -alpha, qdepth + 1, deadline)
         board.pop()
 
         if score >= beta:
@@ -119,14 +123,14 @@ def quiescence(board: chess.Board, alpha: int, beta: int, qdepth: int = 0) -> in
 
 # Negamax search with alpha-beta pruning and a transposition table. Returns the score from the perspective of the side to move.
 def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None, ply: int = 1):
-    if deadline is not None and time.time() >= deadline:
+    if deadline is not None and clock() >= deadline:
         raise TimeoutError
     if board.is_checkmate():
         return -(MATE - ply)
     if board.is_game_over(claim_draw=True):
         return evaluate_side_to_move(board)
     if depth == 0:
-        return quiescence(board, alpha, beta)
+        return quiescence(board, alpha, beta, 0, deadline)
 
     key = tt_key(board)
     alpha_orig = alpha
@@ -179,14 +183,27 @@ def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None
 
     return best
 
+class SearchTimeout(TimeoutError):
+    """The deadline passed during a search. Carries the best root move found so far, if any."""
+
+    def __init__(self, best_move=None):
+        super().__init__()
+        self.best_move = best_move
+
+
 # Top-level function to choose the best move from a given position and search depth.
+# It searches a copy, so a timeout can never leave moves pushed on the caller's board.
 def choose_move(board: chess.Board, depth: int = 3, deadline=None):
+    board = board.copy()
     best_move = None
     best_score = -math.inf
     alpha, beta = -INF, INF
     for move in ordered_moves(board):
         board.push(move)
-        score = -negamax(board, depth - 1, -beta, -alpha, deadline)
+        try:
+            score = -negamax(board, depth - 1, -beta, -alpha, deadline)
+        except TimeoutError:
+            raise SearchTimeout(best_move) from None
         board.pop()
 
         if score > best_score:
@@ -195,32 +212,27 @@ def choose_move(board: chess.Board, depth: int = 3, deadline=None):
 
         if best_score > alpha:
             alpha = best_score
-
-    if best_move is None:
-        best_move = next(iter(board.legal_moves))
-
+    
     return best_move
 
-# Iterative deepening with a time limit. We keep deepening the search until we run out of time.
+
+# Iterative deepening with a time limit: search depth 1, 2, 3... and keep the move
+# from the deepest search that finished.
 def choose_move_timed(board: chess.Board, time_limit_s: float):
-    deadline = time.time() + time_limit_s * 0.97
-    best_move = None
-    depth = 1
-    while True:
-        if time.time() >= deadline:
-            break
-        if depth > 6:
-            break
-
+    deadline = clock() + time_limit_s * 0.97
+    moves = ordered_moves(board)
+    best_move = moves[0] if moves else None  # something legal even if depth 1 never finishes
+    for depth in range(1, 7):
         try:
-            move = choose_move(board, depth=depth, deadline=deadline)
-            best_move = move
-            depth += 1
-        except TimeoutError:
+            best_move = choose_move(board, depth=depth, deadline=deadline)
+        except SearchTimeout as timeout:
+            # A half-finished depth 1 still beats a blind guess.
+            if depth == 1 and timeout.best_move is not None:
+                best_move = timeout.best_move
             break
-
-    if best_move is None:
-        best_move = next(iter(board.legal_moves))
-
+        if clock() >= deadline:
+            break
+            
     return best_move
+
 
