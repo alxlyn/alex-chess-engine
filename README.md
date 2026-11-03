@@ -1,6 +1,6 @@
 # alex-chess-engine
 
-A UCI chess engine in Python that I wrote in February 2026, with AI help, to learn how engines search. It uses negamax with alpha-beta pruning, iterative deepening under a clock, quiescence search and a transposition table. The engine itself is about 490 lines.
+A UCI chess engine in Python that I wrote in February 2026, with AI help, to learn how engines search. It uses negamax with alpha-beta pruning, iterative deepening under a clock, quiescence search and a transposition table. It's about 490 lines including the UCI layer.
 
 ![Engine demo](assets/ENGINE_DEMO.gif)
 
@@ -20,7 +20,7 @@ Evaluation is material plus the piece-square tables from Tomasz Michniewski's Si
 
 ## Measured behavior
 
-- Iterative deepening stops at depth 6, which it doesn't reach in practice. Fixed-depth mode defaults to depth 3.
+- Iterative deepening stops at depth 6. Middlegames don't get there in a normal time budget, but simple endgames do. Fixed-depth mode defaults to depth 3.
 - On an M2, five middlegame positions take 0.4 to 1.4 seconds at depth 3 and 3 to 7 seconds at depth 4, starting from an empty transposition table. With 1.5 seconds per move the timed search finishes depth 3 on all five. With 0.5 seconds it reaches depth 1 to 3, and Kiwipete is the slowest.
 - The old version called `can_claim_draw()` at every node, which tries every legal move to look for a repetition. Replacing it with cheaper draw checks and fixing the move ordering made depth 3 between 3 and 19 times faster on those five positions. Kiwipete went from 27 seconds to 1.4.
 - The demo above is the engine playing Stockfish 15.1 in Banksia on a 1-minute clock. It has no opening book or endgame tables and it won't beat Stockfish. I haven't measured its Elo.
@@ -29,6 +29,7 @@ Evaluation is material plus the piece-square tables from Tomasz Michniewski's Si
 
 - The transposition table key doesn't include move history. Repeated positions are scored before the table is read, but a stored score can still come from a line that had a repetition in it.
 - Quiescence only follows captures, so it can miss checks and promotions at the horizon.
+- When the transposition table holds only a bound, the search narrows its window with it but decides the stored flag against the original window, so a cutoff can be stored as an exact score.
 - The UCI loop doesn't print `info` lines or support `stop` and `go infinite` yet.
 
 ## Tests
