@@ -30,3 +30,19 @@ def test_timeout_leaves_the_board_unchanged(monkeypatch):
     board = chess.Board(KIWIPETE)
     search.choose_move_timed(board, time_limit_s=1.0)
     assert board.fen() == KIWIPETE
+
+
+def test_a_timeout_in_depth_one_keeps_the_best_move_searched(monkeypatch):
+    board = chess.Board(KIWIPETE)
+    first, second = search.ordered_moves(board)[:2]
+    # Scores come back from the opponent's side: the first move is -50 for us, the second +300.
+    child_scores = iter([50, -300])
+
+    def fake_negamax(*args, **kwargs):
+        try:
+            return next(child_scores)
+        except StopIteration:
+            raise TimeoutError from None  # time runs out on the third root move
+
+    monkeypatch.setattr(search, "negamax", fake_negamax)
+    assert search.choose_move_timed(board, time_limit_s=1.0) == second
