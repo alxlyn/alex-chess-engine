@@ -42,40 +42,15 @@ def from_tt(score: int, ply: int) -> int:
 def tt_key(board: chess.Board):
     return tuple(board.fen().split(" ", 4)[:4])
 
-# Move ordering: try TT move first, then captures and checks, ordered by MVV/LVA.
+# Move ordering: the table's best move first, then captures, then checks.
 def ordered_moves(board: chess.Board):
-    moves = list(board.legal_moves)
-    key = tt_key(board)
-    entry = TT.get(key)
+    entry = TT.get(tt_key(board))
+    tt_move = chess.Move.from_uci(entry[3]) if entry and entry[3] else None
 
-    # Try TT best move first
-    if entry is not None:
-        _, _, _, best_move_uci = entry
-        if best_move_uci:
-            try:
-                bm = chess.Move.from_uci(best_move_uci)
-                if bm in moves:
-                    moves.remove(bm)
-                    moves.insert(0, bm)
-            except Exception:
-                pass
-
-    # After the TT move, we sort captures and checks to try the most promising ones first. This is a common heuristic to improve pruning.            
     def sort_key(m: chess.Move):
-        capture = 1 if board.is_capture(m) else 0
-        board.push(m)
-        gives_check = 1 if board.is_check() else 0
-        board.pop()
-        return (capture, gives_check)
+        return (m == tt_move, board.is_capture(m), board.gives_check(m))
 
-    # Keep the TT move in front, sort the rest
-    if len(moves) > 1:
-        first = moves[0]
-        rest = moves[1:]
-        rest.sort(key=sort_key, reverse=True)
-        moves = [first] + rest
-
-    return moves
+    return sorted(board.legal_moves, key=sort_key, reverse=True)
 
 # MVV/LVA capture ordering
 # This is a common heuristic to order captures, trying the most "valuable" ones first 
@@ -135,8 +110,7 @@ def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None
     # can_claim_draw() tried every legal move at every node and ate most of the time.
     if board.is_repetition(2) or board.halfmove_clock >= 100 or board.is_insufficient_material():
         return 0
-        
-    if depth == 0:
+    if depth <= 0:
         return quiescence(board, alpha, beta, 0, deadline)
 
     key = tt_key(board)
@@ -219,7 +193,10 @@ def choose_move(board: chess.Board, depth: int = 3, deadline=None):
 
         if best_score > alpha:
             alpha = best_score
-    
+
+    # Keep the root's best move so the next, deeper search tries it first.
+    if best_move is not None:
+        TT[tt_key(board)] = (depth, "EXACT", int(best_score), best_move.uci())
     return best_move
 
 
