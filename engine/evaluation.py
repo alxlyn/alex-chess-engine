@@ -10,7 +10,8 @@ PIECE_VALUES = {
 }
 
 # Piece-square tables (from White's perspective).
-# Indexing: python-chess squares go from a1=0, h8=63.
+# The tables are written rank 8 first, the way a board is drawn. python-chess
+# numbers squares from a1 = 0, so White reads them through square_mirror.
 # Values are in centipawns (like piece values).
 # PSTs are a common way to give positional bonuses/penalties based on piece location.
 PST_PAWN = [
@@ -107,11 +108,11 @@ def evaluate_white(board: chess.Board) -> int:
 
         for sq in board.pieces(piece_type, chess.WHITE):
             score += value
-            score += pst[sq]  # white pieces use PST as-is
+            score += pst[chess.square_mirror(sq)]
 
         for sq in board.pieces(piece_type, chess.BLACK):
             score -= value
-            score -= pst[chess.square_mirror(sq)]  # black pieces use mirrored PST
+            score -= pst[sq]
 
     return score
 
