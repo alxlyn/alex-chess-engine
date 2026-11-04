@@ -91,3 +91,8 @@ def test_go_still_answers_when_the_search_crashes(monkeypatch, capsys):
     uci.uci_loop()
     out = capsys.readouterr().out.splitlines()
     assert any(line.startswith("bestmove ") and line != "bestmove 0000" for line in out)
+
+
+def test_only_the_side_to_moves_clock_is_needed():
+    assert pick_time_limit(chess.Board(), "go wtime 3050".split()) == pytest.approx(0.1)  # (3050 - 50) / 30 ms
+    assert pick_time_limit(chess.Board(BLACK_TO_MOVE), "go wtime 3050".split()) is None

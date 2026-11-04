@@ -50,12 +50,11 @@ def pick_time_limit(board: chess.Board, parts: list[str]) -> float | None:
     winc = int_after(parts, "winc", 0)
     binc = int_after(parts, "binc", 0)
 
-    if wtime is None or btime is None:
-        return None
-
     # Pick a time limit based on remaining time and increment. 
     time_ms = wtime if board.turn == chess.WHITE else btime
     inc_ms = winc if board.turn == chess.WHITE else binc
+    if time_ms is None:  # no clock for the side to move, so search by depth
+        return None
 
     # Keep 50 ms back for the GUI and the pipe. Without it a long game on a short
     # clock ran out of time, because every move costs a little more than it thinks.
