@@ -151,3 +151,18 @@ def test_a_fail_high_is_stored_as_a_lower_bound():
     negamax(board, 2, -1001, -1000)  # everything beats -1000
     _, flag, value, _ = TT[tt_key(board)]
     assert flag == "LOWER" and value >= -1000
+
+
+def test_stalemate_scores_zero():
+    from engine.search import INF, negamax
+
+    board = chess.Board("7k/5Q2/6K1/8/8/8/8/8 b - - 0 1")  # Black has no moves and isn't in check
+    assert negamax(board, 1, -INF, INF) == 0
+
+
+def test_castling_rights_are_part_of_the_table_key():
+    from engine.search import tt_key
+
+    with_rights = chess.Board("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1")
+    without = chess.Board("r3k2r/8/8/8/8/8/8/R3K2R w - - 0 1")
+    assert tt_key(with_rights) != tt_key(without)

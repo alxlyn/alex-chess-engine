@@ -76,3 +76,18 @@ def test_ucinewgame_clears_the_table():
 def test_the_cap_holds_when_the_increment_is_bigger_than_the_clock():
     limit = pick_time_limit(chess.Board(), "go wtime 1050 btime 1050 winc 2000 binc 2000".split())
     assert limit == pytest.approx(0.25)  # a quarter of the 1000 ms left, not 1033 ms
+
+
+def test_go_still_answers_when_the_search_crashes(monkeypatch, capsys):
+    import io
+
+    import uci
+
+    def broken_search(*args, **kwargs):
+        raise RuntimeError("search bug")
+
+    monkeypatch.setattr(uci, "choose_move", broken_search)
+    monkeypatch.setattr("sys.stdin", io.StringIO("position startpos\ngo depth 2\nquit\n"))
+    uci.uci_loop()
+    out = capsys.readouterr().out.splitlines()
+    assert any(line.startswith("bestmove ") and line != "bestmove 0000" for line in out)
