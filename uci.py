@@ -107,8 +107,8 @@ def handle(line: str, board: chess.Board | None, default_depth: int = 3) -> ches
     return board
 
 
-# The main UCI loop: read a command, run it, repeat. A bad command prints an error
-# instead of killing the engine, because a crash loses the game.
+# The main UCI loop. A command that fails prints an error and the loop keeps
+# going, because a crash loses the game.
 def uci_loop():
     board = chess.Board()
     for raw in sys.stdin:
