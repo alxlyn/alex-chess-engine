@@ -123,3 +123,31 @@ def test_quiescence_tries_pawn_takes_queen_before_queen_takes_pawn():
 
     board = chess.Board("k7/8/8/3q3p/2P5/8/8/K6Q w - - 0 1")
     assert _capture_moves(board)[0] == chess.Move.from_uci("c4d5")
+
+
+def test_a_bound_from_the_table_doesnt_become_the_score():
+    from engine.search import INF, TT, negamax, tt_key
+
+    board = chess.Board()
+    true_score = negamax(board, 2, -INF, INF)
+    TT.clear()
+    TT[tt_key(board)] = (5, "UPPER", -50, None)  # only says "at most -50"
+    assert negamax(board, 2, -INF, INF) == true_score
+
+
+def test_a_fail_low_is_stored_as_an_upper_bound():
+    from engine.search import TT, negamax, tt_key
+
+    board = chess.Board()
+    negamax(board, 2, 1000, 1001)  # nothing reaches +1000
+    _, flag, value, _ = TT[tt_key(board)]
+    assert flag == "UPPER" and value <= 1000
+
+
+def test_a_fail_high_is_stored_as_a_lower_bound():
+    from engine.search import TT, negamax, tt_key
+
+    board = chess.Board()
+    negamax(board, 2, -1001, -1000)  # everything beats -1000
+    _, flag, value, _ = TT[tt_key(board)]
+    assert flag == "LOWER" and value >= -1000

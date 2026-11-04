@@ -125,14 +125,10 @@ def negamax(board: chess.Board, depth: int, alpha: int, beta: int, deadline=None
     if entry is not None:
         tt_depth, flag, val, _ = entry
         val = from_tt(val, ply)
+        # Use a bound only when it settles this node. Narrowing alpha or beta with it
+        # made the flag stored below wrong, so a cutoff could be saved as EXACT.
         if tt_depth >= depth:
-            if flag == "EXACT":
-                return val
-            elif flag == "LOWER":
-                alpha = max(alpha, val)
-            elif flag == "UPPER":
-                beta = min(beta, val)
-            if alpha >= beta:
+            if flag == "EXACT" or (flag == "LOWER" and val >= beta) or (flag == "UPPER" and val <= alpha):
                 return val
 
     best = -math.inf

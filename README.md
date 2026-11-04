@@ -29,7 +29,6 @@ Evaluation is material plus the piece-square tables from Tomasz Michniewski's Si
 
 - The transposition table key doesn't include move history. Repeated positions are scored before the table is read, but a stored score can still come from a line that had a repetition in it.
 - Quiescence only follows captures, so it can miss checks and promotions at the horizon.
-- When the transposition table holds only a bound, the search narrows its window with it but decides the stored flag against the original window, so a cutoff can be stored as an exact score.
 - The UCI loop doesn't print `info` lines or support `stop` and `go infinite` yet.
 
 ## Tests
@@ -39,7 +38,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-There are 43 tests, and GitHub Actions runs them on every push. Most of them came from an AI code review in November, which found these bugs and gave step-by-step fixes and tests; I made each change by hand, one commit at a time: on a short clock the engine could answer with a move for the wrong side, at depth 3 it missed some mates in one, and White read the piece-square tables upside down. They check piece-square values, mate in one, mate scores and bounds in the transposition table, a fake clock that runs out mid-search, repetition and the 50-move rule, move ordering, and the UCI loop (depth 0, no legal moves, bad input, a tiny clock).
+There are 46 tests, and GitHub Actions runs them on every push. Most of them came from an AI code review in November, which found these bugs and gave step-by-step fixes and tests; I made each change by hand, one commit at a time: on a short clock the engine could answer with a move for the wrong side, at depth 3 it missed some mates in one, and White read the piece-square tables upside down. They check piece-square values, mate in one, mate scores and bounds in the transposition table, a fake clock that runs out mid-search, repetition and the 50-move rule, move ordering, and the UCI loop (depth 0, no legal moves, bad input, a tiny clock).
 
 ## Running it
 
