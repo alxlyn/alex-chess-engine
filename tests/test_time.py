@@ -1,3 +1,5 @@
+import itertools
+
 import chess
 import pytest
 
@@ -46,3 +48,16 @@ def test_a_timeout_in_depth_one_keeps_the_best_move_searched(monkeypatch):
 
     monkeypatch.setattr(search, "negamax", fake_negamax)
     assert search.choose_move_timed(board, time_limit_s=1.0) == second
+
+
+def test_the_timed_search_stops_by_its_deadline(monkeypatch):
+    ticks = itertools.count()
+    monkeypatch.setattr(search, "clock", lambda: next(ticks) * 0.001)  # 1 ms per clock read
+    search.choose_move_timed(chess.Board(KIWIPETE), time_limit_s=0.2)
+    assert next(ticks) * 0.001 <= 0.2 + 0.002
+
+
+def test_quiescence_checks_the_deadline(monkeypatch):
+    monkeypatch.setattr(search, "clock", lambda: 1.0)
+    with pytest.raises(TimeoutError):
+        search.quiescence(chess.Board(KIWIPETE), -search.INF, search.INF, deadline=0.0)

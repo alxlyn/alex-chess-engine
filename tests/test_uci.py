@@ -71,3 +71,8 @@ def test_ucinewgame_clears_the_table():
     assert search.TT
     handle("ucinewgame", chess.Board())
     assert not search.TT
+
+
+def test_the_cap_holds_when_the_increment_is_bigger_than_the_clock():
+    limit = pick_time_limit(chess.Board(), "go wtime 1050 btime 1050 winc 2000 binc 2000".split())
+    assert limit == pytest.approx(0.25)  # a quarter of the 1000 ms left, not 1033 ms
