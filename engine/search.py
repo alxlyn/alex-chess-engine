@@ -59,7 +59,7 @@ def ordered_moves(board: chess.Board):
 # MVV/LVA capture ordering
 # Biggest victim first, cheapest attacker first (pawn takes queen before queen takes pawn).
 def _capture_moves(board: chess.Board):
-    moves = [m for m in board.legal_moves if board.is_capture(m)]
+    moves = list(board.generate_legal_captures())  # only captures, not every legal move
     def mvv_lva_key(m: chess.Move):
         victim = board.piece_at(m.to_square)
         attacker = board.piece_at(m.from_square)

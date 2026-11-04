@@ -116,3 +116,10 @@ def test_losing_mate_scores_convert_both_ways():
 
     assert to_tt(-(MATE - 5), 3) == -(MATE - 2)
     assert from_tt(to_tt(-(MATE - 5), 3), 3) == -(MATE - 5)
+
+
+def test_quiescence_tries_pawn_takes_queen_before_queen_takes_pawn():
+    from engine.search import _capture_moves
+
+    board = chess.Board("k7/8/8/3q3p/2P5/8/8/K6Q w - - 0 1")
+    assert _capture_moves(board)[0] == chess.Move.from_uci("c4d5")

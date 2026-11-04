@@ -21,8 +21,8 @@ Evaluation is material plus the piece-square tables from Tomasz Michniewski's Si
 ## Measured behavior
 
 - Iterative deepening stops at depth 6. Middlegames don't get there in a normal time budget, but simple endgames do. Fixed-depth mode defaults to depth 3.
-- On an M2, five middlegame positions take 0.4 to 1.4 seconds at depth 3 and 3 to 7 seconds at depth 4, starting from an empty transposition table. With 1.5 seconds per move the timed search finishes depth 3 on all five. With 0.5 seconds it reaches depth 1 to 3, and Kiwipete is the slowest.
-- The old version called `can_claim_draw()` at every node, which tries every legal move to look for a repetition. Replacing it with cheaper draw checks and fixing the move ordering made depth 3 between 3 and 19 times faster on those five positions. Kiwipete went from 27 seconds to 1.4.
+- On an M2, five middlegame positions take 0.3 to 1.0 seconds at depth 3 and 2 to 5 seconds at depth 4, starting from an empty transposition table. With 1.5 seconds per move the timed search finishes depth 3 on all five. With 0.5 seconds it reaches depth 2 or 3, and Kiwipete is the slowest. `python bench.py` prints these numbers.
+- The old version called `can_claim_draw()` at every node, which tries every legal move to look for a repetition. Replacing it with cheaper draw checks, fixing the move ordering and generating only captures in quiescence made depth 3 between 4 and 28 times faster on those five positions. Kiwipete went from 27 seconds to 1.0.
 - The demo above is the engine playing Stockfish 15.1 in Banksia on a 1-minute clock. It has no opening book or endgame tables and it won't beat Stockfish. I haven't measured its Elo.
 
 ## Known issues
@@ -39,7 +39,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-There are 42 tests, and GitHub Actions runs them on every push. Most of them came from an AI code review in November, which found these bugs and gave step-by-step fixes and tests; I made each change by hand, one commit at a time: on a short clock the engine could answer with a move for the wrong side, at depth 3 it missed some mates in one, and White read the piece-square tables upside down. They check piece-square values, mate in one, mate scores and bounds in the transposition table, a fake clock that runs out mid-search, repetition and the 50-move rule, move ordering, and the UCI loop (depth 0, no legal moves, bad input, a tiny clock).
+There are 43 tests, and GitHub Actions runs them on every push. Most of them came from an AI code review in November, which found these bugs and gave step-by-step fixes and tests; I made each change by hand, one commit at a time: on a short clock the engine could answer with a move for the wrong side, at depth 3 it missed some mates in one, and White read the piece-square tables upside down. They check piece-square values, mate in one, mate scores and bounds in the transposition table, a fake clock that runs out mid-search, repetition and the 50-move rule, move ordering, and the UCI loop (depth 0, no legal moves, bad input, a tiny clock).
 
 ## Running it
 
@@ -74,6 +74,7 @@ engine/
   evaluation.py  # material + piece-square tables
 uci.py           # UCI protocol loop and time-control parsing
 main.py          # self-play
+bench.py         # the timings above
 tests/           # pytest suite
 ```
 
